@@ -62,12 +62,7 @@ def main():
             process_image(image, face_cascade, scale_factor, min_neighbors, min_face_size, rect_color, rect_thickness)
 
     elif option == "Use Camera":
-        # Button to switch camera
-        if st.sidebar.button("Switch Camera"):
-            # Toggle between camera index 0 (usually front) and 1 (usually back)
-            st.session_state.camera_index = 1 if st.session_state.camera_index == 0 else 0
-            st.sidebar.write(f"Current Camera: {'Front' if st.session_state.camera_index == 0 else 'Back'}")
-
+        
         # Streamlit camera input
         st.write("Press the button below to start face tracking.")
         video_frame = st.camera_input("Camera", key="camera")
