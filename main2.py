@@ -104,7 +104,7 @@ def main():
             ax.hist(img.ravel(), 256, [0, 256])
             fig_place.pyplot(fig)
             
-            time.sleep(0.1)  # Use time.sleep() here
+        
 
 # Function to process and display the image with detected faces
 def process_image(image, scale_factor, min_neighbors, min_face_size, rect_color, rect_thickness):
