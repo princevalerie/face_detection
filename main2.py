@@ -72,7 +72,7 @@ def main():
 
         # WebRTC streamer with the transformer for real-time video face tracking
         webrtc_streamer(
-            key="face-tracking",
+            key="sample",
             video_transformer_factory=lambda: FaceTrackingTransformer(
                 scale_factor, min_neighbors, min_face_size, rect_color, rect_thickness
             )
