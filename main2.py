@@ -1,8 +1,13 @@
-
 import cv2
 import streamlit as st
 import numpy as np
+import threading
+from matplotlib import pyplot as plt
 from streamlit_webrtc import VideoTransformerBase, webrtc_streamer
+
+# Thread-safe container for image frames
+lock = threading.Lock()
+img_container = {"img": None}
 
 # Transformer class for face tracking using the webcam
 class FaceTrackingTransformer(VideoTransformerBase):
@@ -16,7 +21,7 @@ class FaceTrackingTransformer(VideoTransformerBase):
 
     def transform(self, frame):
         img = frame.to_ndarray(format="bgr24")
-
+        
         # Convert to grayscale for face detection
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -35,10 +40,14 @@ class FaceTrackingTransformer(VideoTransformerBase):
             bgr_color = tuple(int(hex_color[i:i+2], 16) for i in (4, 2, 0))
             cv2.rectangle(img, (x, y), (x + w, y + h), bgr_color, self.rect_thickness)
 
+        # Store the latest frame for histogram processing
+        with lock:
+            img_container["img"] = gray
+
         return img
 
 def main():
-    st.title("Face Detection Application")
+    st.title("Face Detection and Histogram Display")
 
     # Sidebar for adjusting face detection parameters
     st.sidebar.header("Parameter Settings")
@@ -71,12 +80,28 @@ def main():
         st.write("Press the button below to start real-time face tracking.")
 
         # WebRTC streamer with the transformer for real-time video face tracking
-        webrtc_streamer(
-            key="sample",
+        ctx = webrtc_streamer(
+            key="example",
             video_transformer_factory=lambda: FaceTrackingTransformer(
                 scale_factor, min_neighbors, min_face_size, rect_color, rect_thickness
             )
         )
+
+        # Set up plot for histogram display
+        fig_place = st.empty()
+        fig, ax = plt.subplots(1, 1)
+
+        # Real-time histogram update loop
+        while ctx.state.playing:
+            with lock:
+                img = img_container["img"]
+            if img is None:
+                continue
+
+            # Update the histogram
+            ax.cla()
+            ax.hist(img.ravel(), 256, [0, 256])
+            fig_place.pyplot(fig)
 
 # Function to process and display the image with detected faces
 def process_image(image, scale_factor, min_neighbors, min_face_size, rect_color, rect_thickness):
