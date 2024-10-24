@@ -1,5 +1,6 @@
 import streamlit as st
 import cv2
+import imageio
 import numpy as np
 
 def main():
@@ -50,22 +51,23 @@ def main():
         st.error(f"Error loading face cascade: {str(e)}")
         return
 
-    # Start webcam
+    # Start webcam using imageio
     if st.button("Start Face Tracking"):
         st.write("Face tracking is running. Press 'Stop' to end.")
         try:
-            video_capture = cv2.VideoCapture(0)  # 0 is the default camera
+            video_stream = imageio.get_reader('<video0>')  # '<video0>' is the default camera
             stframe = st.empty()  # Placeholder for video frame
             stop_button = st.button("Stop")
 
             while not stop_button:
-                ret, frame = video_capture.read()
-                if not ret:
-                    st.error("Failed to capture video from the camera.")
-                    break
+                # Read frame from the video stream
+                frame = next(video_stream)
+
+                # Convert to numpy array
+                frame = np.array(frame)
 
                 # Convert to grayscale for face detection
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 
                 # Detect faces
                 faces = face_cascade.detectMultiScale(
@@ -82,15 +84,13 @@ def main():
                     bgr_color = tuple(int(hex_color[i:i+2], 16) for i in (4, 2, 0))
                     cv2.rectangle(frame, (x, y), (x+w, y+h), bgr_color, rect_thickness)
 
-                # Convert BGR to RGB for Streamlit display
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                stframe.image(frame_rgb, channels="RGB")
+                # Display the frame in Streamlit
+                stframe.image(frame, channels="RGB")
 
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                # Allow a stop condition for the loop
+                stop_button = st.button("Stop")
 
-            video_capture.release()
-            cv2.destroyAllWindows()
+            video_stream.close()
             st.write("Face tracking stopped.")
         except Exception as e:
             st.error(f"Error accessing the camera: {str(e)}")
