@@ -48,7 +48,7 @@ class FaceTrackingTransformer(VideoTransformerBase):
         return img
 
 def main():
-    st.title("Face Detection and Histogram Display")
+    st.title("Face Detection")
 
     # Sidebar for adjusting face detection parameters
     st.sidebar.header("Parameter Settings")
