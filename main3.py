@@ -1,38 +1,8 @@
 import streamlit as st
 import numpy as np
 import cv2
-from streamlit_webrtc import VideoTransformerBase, webrtc_streamer
-
-class FaceTrackingTransformer(VideoTransformerBase):
-    def __init__(self, scale_factor, min_neighbors, min_face_size, rect_color, rect_thickness):
-        # Load face cascade classifier
-        self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        self.scale_factor = scale_factor
-        self.min_neighbors = min_neighbors
-        self.min_face_size = min_face_size
-        self.rect_color = tuple(int(rect_color[i:i+2], 16) for i in (1, 3, 5))  # Convert hex to RGB
-        self.rect_thickness = rect_thickness
-
-    def transform(self, frame):
-        # Convert the frame to an OpenCV format
-        img = frame.to_ndarray(format="bgr")
-
-        # Convert to grayscale for face detection
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-        # Detect faces
-        faces = self.face_cascade.detectMultiScale(
-            gray,
-            scaleFactor=self.scale_factor,
-            minNeighbors=self.min_neighbors,
-            minSize=(self.min_face_size, self.min_face_size)
-        )
-
-        # Draw rectangles around faces
-        for (x, y, w, h) in faces:
-            cv2.rectangle(img, (x, y), (x + w, y + h), self.rect_color, self.rect_thickness)
-
-        return img
+from PIL import Image
+import io
 
 def main():
     st.title("Face Tracking Application")
@@ -47,9 +17,62 @@ def main():
     rect_color = st.sidebar.color_picker("Rectangle Color", "#00FF00")
     rect_thickness = st.sidebar.slider("Rectangle Thickness", 1, 5, 2)
 
-    # Start webcam with face tracking
-    webrtc_streamer(key="face-tracking", 
-                     video_transformer_factory=lambda: FaceTrackingTransformer(scale_factor, min_neighbors, min_face_size, rect_color, rect_thickness))
+    # Load face cascade classifier
+    try:
+        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    except Exception as e:
+        st.error(f"Error loading face cascade: {str(e)}")
+        return
+
+    # Start video input
+    video_input = st.video("", format="video/mp4", key="video_input")
+    
+    if video_input is not None:
+        try:
+            # Convert video input to bytes and then to PIL image
+            video_bytes = video_input.read()
+            image = Image.open(io.BytesIO(video_bytes))
+            
+            # Convert PIL image to numpy array
+            frame = np.array(image)
+            
+            # Convert to grayscale for face detection
+            gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+
+            # Detect faces
+            faces = face_cascade.detectMultiScale(
+                gray,
+                scaleFactor=scale_factor,
+                minNeighbors=min_neighbors,
+                minSize=(min_face_size, min_face_size)
+            )
+
+            # Draw rectangles around faces
+            for (x, y, w, h) in faces:
+                # Convert hex color to BGR
+                hex_color = rect_color.lstrip('#')
+                bgr_color = tuple(int(hex_color[i:i + 2], 16) for i in (4, 2, 0))
+                cv2.rectangle(frame, (x, y), (x + w, y + h), bgr_color, rect_thickness)
+
+            # Display the result
+            st.image(frame, caption='Detected Faces', use_column_width=True)
+
+            # Show number of faces detected
+            st.write(f"Number of faces detected: {len(faces)}")
+
+            # Show face locations
+            if len(faces) > 0:
+                st.write("Face locations (x, y, width, height):")
+                for i, (x, y, w, h) in enumerate(faces, 1):
+                    st.write(f"Face {i}: ({x}, {y}, {w}, {h})")
+
+        except Exception as e:
+            st.error(f"Error processing image: {str(e)}")
+            st.info("""Troubleshooting:
+            1. Make sure the video is clear.
+            2. Ensure faces are visible in the video.
+            3. Adjust detection parameters in the sidebar.
+            """)
 
 if __name__ == '__main__':
     main()
