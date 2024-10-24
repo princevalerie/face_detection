@@ -4,6 +4,7 @@ import numpy as np
 import threading
 from matplotlib import pyplot as plt
 from streamlit_webrtc import VideoTransformerBase, webrtc_streamer
+import time  # Import the time module
 
 # Thread-safe container for image frames
 lock = threading.Lock()
@@ -42,7 +43,7 @@ class FaceTrackingTransformer(VideoTransformerBase):
 
         # Store the latest frame for histogram processing
         with lock:
-            img_container["img"] = gray
+            img_container["img"] = img  # Store the original color image
 
         return img
 
@@ -79,10 +80,10 @@ def main():
     elif option == "Real-Time Face Tracking":
         st.write("Press the button below to start real-time face tracking.")
 
-        # WebRTC streamer with the transformer for real-time video face tracking
+        # Updated line here
         ctx = webrtc_streamer(
             key="example",
-            video_transformer_factory=lambda: FaceTrackingTransformer(
+            video_processor_factory=lambda: FaceTrackingTransformer(
                 scale_factor, min_neighbors, min_face_size, rect_color, rect_thickness
             )
         )
@@ -92,20 +93,18 @@ def main():
         fig, ax = plt.subplots(1, 1)
 
         # Real-time histogram update loop
-        while True:  # Tetap dalam loop selama aplikasi berjalan
-            if ctx.state.playing:
-                with lock:
-                    img = img_container["img"]
-                if img is None:
-                    continue
+        while ctx.state.playing:
+            with lock:
+                img = img_container["img"]
+            if img is None:
+                continue
 
-                # Update the histogram
-                ax.cla()
-                ax.hist(img.ravel(), 256, [0, 256])
-                fig_place.pyplot(fig)
-            else:
-                # Jika ctx tidak aktif, tunggu sebentar dan lanjutkan loop
-                st.sleep(0.1)
+            # Update the histogram
+            ax.cla()
+            ax.hist(img.ravel(), 256, [0, 256])
+            fig_place.pyplot(fig)
+            
+            time.sleep(0.1)  # Use time.sleep() here
 
 # Function to process and display the image with detected faces
 def process_image(image, scale_factor, min_neighbors, min_face_size, rect_color, rect_thickness):
@@ -134,3 +133,4 @@ def process_image(image, scale_factor, min_neighbors, min_face_size, rect_color,
 
 if __name__ == '__main__':
     main()
+
