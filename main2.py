@@ -92,16 +92,20 @@ def main():
         fig, ax = plt.subplots(1, 1)
 
         # Real-time histogram update loop
-        while ctx.state.playing:
-            with lock:
-                img = img_container["img"]
-            if img is None:
-                continue
+        while True:  # Tetap dalam loop selama aplikasi berjalan
+            if ctx.state.playing:
+                with lock:
+                    img = img_container["img"]
+                if img is None:
+                    continue
 
-            # Update the histogram
-            ax.cla()
-            ax.hist(img.ravel(), 256, [0, 256])
-            fig_place.pyplot(fig)
+                # Update the histogram
+                ax.cla()
+                ax.hist(img.ravel(), 256, [0, 256])
+                fig_place.pyplot(fig)
+            else:
+                # Jika ctx tidak aktif, tunggu sebentar dan lanjutkan loop
+                st.sleep(0.1)
 
 # Function to process and display the image with detected faces
 def process_image(image, scale_factor, min_neighbors, min_face_size, rect_color, rect_thickness):
